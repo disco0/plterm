@@ -1,12 +1,12 @@
 -- Copyright (c) 2018 Phil Leblanc  -- see LICENSE file
 
 ------------------------------------------------------------------------
---[[  
+--[[
 
 plterm - Pure Lua ANSI Terminal functions - unix only
 
-This module assumes the tty is in raw mode. 
-It provides functions based on stty (so available on unix) 
+This module assumes the tty is in raw mode.
+It provides functions based on stty (so available on unix)
 to save, set and restore tty modes.
 
 Module functions:
@@ -18,7 +18,7 @@ up(n)
 down(n)
 right(n)
 left(n)     -- move the cursor by n positions (default to 1)
-color(f, b, m)  
+color(f, b, m)
             -- change the color used to write characters
 		(foreground color, background color, modifier)
 		see term.colors
@@ -29,12 +29,12 @@ restore()   -- save and restore the position of the cursor
 reset()     -- reset the terminal (colors, cursor position)
 
 input()     -- input iterator (coroutine-based)
-		return a "next key" function that can be iteratively called 
-		to read a key (escape sequences returned by function keys 
+		return a "next key" function that can be iteratively called
+		to read a key (escape sequences returned by function keys
 		are parsed)
 rawinput()  -- same, but escape sequences are not parsed.
 getcurpos() -- return the current position of the cursor
-getscrlc()  -- return the dimensions of the screen 
+getscrlc()  -- return the dimensions of the screen
                (number of lines and columns)
 keyname()   -- return a printable name for any key
 		- key names in term.keys for function keys,
@@ -51,7 +51,7 @@ restoremode(mode)  -- restore a mode saved by savemode()
 License: BSD
 https://github.com/philanc/plterm
 
--- just in case, a good ref on ANSI esc sequences:   
+-- just in case, a good ref on ANSI esc sequences:
 https://en.wikipedia.org/wiki/ANSI_escape_code
 (in the text, "CSI" is "<esc>[")
 
@@ -71,19 +71,19 @@ local repr = function(x) return strf("%q", tostring(x)) end
 
 local out = io.write
 
-local function outf(...) 
+local function outf(...)
 	-- write arguments to stdout, then flush.
 	io.write(...); io.flush()
 end
 
-local function outdbg(x, sep) 
+local function outdbg(x, sep)
 	out(repr(x):sub(2, -2))
 	if sep then out(sep) end
-	io.flush() 
+	io.flush()
 end
 
 -- following definitions (from term.clear to term.restore) are
--- based on public domain code by Luiz Henrique de Figueiredo 
+-- based on public domain code by Luiz Henrique de Figueiredo
 -- http://lua-users.org/lists/lua-l/2009-12/msg00942.html
 
 local term={ -- the plterm module
@@ -98,10 +98,10 @@ local term={ -- the plterm module
 	down = function(n) out("\027[",n or 1,"B") end,
 	right = function(n) out("\027[",n or 1,"C") end,
 	left = function(n) out("\027[",n or 1,"D") end,
-	color = function(f,b,m) 
+	color = function(f,b,m)
 	    if m then out("\027[",f,";",b,";",m,"m")
 	    elseif b then out("\027[",f,";",b,"m")
-	    else out("\027[",f,"m") end 
+	    else out("\027[",f,"m") end
 	end,
 	-- hide / show cursor
 	hide = function() out("\027[?25l") end,
@@ -116,7 +116,7 @@ local term={ -- the plterm module
 term.colors = {
 	default = 0,
 	-- foreground colors
-	black = 30, red = 31, green = 32, yellow = 33, 
+	black = 30, red = 31, green = 32, yellow = 33,
 	blue = 34, magenta = 35, cyan = 36, white = 37,
 	-- backgroud colors
 	bgblack = 40, bgred = 41, bggreen = 42, bgyellow = 43,
@@ -128,6 +128,7 @@ term.colors = {
 ------------------------------------------------------------------------
 -- key input
 
+---@type KeyEnum
 term.keys = { -- key code definitions
 	unknown = 0x10000,
 	esc = 0x1b,
@@ -161,7 +162,7 @@ local keys = term.keys
 --special chars (for parsing esc sequences)
 local ESC, LETO, LBR, TIL= 27, 79, 91, 126  --  esc, [, ~
 
-local isdigitsc = function(c) 
+local isdigitsc = function(c)
 	-- return true if c is the code of a digit or ';'
 	return (c >= 48 and c < 58) or c == 59
 end
@@ -209,7 +210,7 @@ local seq = {
 
 	['OH'] = keys.khome, --vte
 	['OF'] = keys.kend,  --vte
-	
+
 }
 
 local getcode = function() return byte(io.read(1)) end
@@ -225,9 +226,9 @@ term.input = function()
 		while true do
 			c = getcode()
 			if c ~= ESC then -- not a seq, yield c
-				yield(c) 
+				yield(c)
 				goto continue
-			end 
+			end
 			c1 = getcode()
 			if c1 == ESC then -- esc esc [ ... sequence
 				yield(ESC)
@@ -243,7 +244,7 @@ term.input = function()
 			if c2 == LBR then -- esc[[x sequences (F1-F5 in linux console)
 				s = s .. char(getcode())
 			end
-			if seq[s] then 
+			if seq[s] then
 				yield(seq[s])
 				goto continue
 			end
@@ -254,7 +255,7 @@ term.input = function()
 			while true do
 				ci = getcode()
 				s = s .. char(ci)
-				if ci == TIL then 
+				if ci == TIL then
 					if seq[s] then
 						yield(seq[s])
 						goto continue
@@ -286,7 +287,7 @@ term.rawinput = function()
 		local c
 		while true do
 			c = getcode()
-			yield(c) 
+			yield(c)
 		end
 	end)--coroutine
 end--rawinput()
@@ -322,7 +323,7 @@ term.getscrlc = function()
 end
 
 term.keyname = function(c)
-	for k, v in pairs(keys) do 
+	for k, v in pairs(keys) do
 		if c == v then return k end
 	end
 	if c < 32 then return "^" .. char(c+64) end
@@ -337,7 +338,7 @@ end
 
 -- use the following to define a non standard stty location
 -- eg.:  stty = "/opt/busybox/bin/stty"
--- 
+--
 local stty = "stty" -- use the default stty
 
 term.setrawmode = function()
@@ -359,5 +360,115 @@ term.restoremode = function(mode)
 	return os.execute(stty .. " " .. mode)
 end
 
-return term 
+return term
 
+
+------------------------------------------------------------------------
+--[[                      EmmyLua Declarations                      ]]--
+
+--region plterm.emmylua
+--region plterm.emmylua
+
+    ---@class PureLuaTerm @ ANSI Terminal functions
+    ---@field public clear       fun(): void @ Clear screen
+    ---@field public cleareol    fun(): void @ Clear to end of line
+    ---@field public golc        fun(line: TermLineNumber, col: TermColumnNumber): void @ Move the cursor to line l, column c
+    ---@field public up          fun(n: number): void @ Move the cursor by n: number positions (default to 1)
+    ---@field public down        fun(n: number): void @ Move the cursor by n: number positions (default to 1)
+    ---@field public right       fun(n: number): void @ Move the cursor by n: number positions (default to 1)
+    ---@field public left        fun(n: number): void @ Move the cursor by n: number positions (default to 1)
+    ---@field public color       fun(f: ForegroundColor, b: BackgroundColor, m: TermModifier): void @ Change the color used to write characters (foreground color, background color, modifier) see PureLuaTerm.colors
+    ---@field public hide        fun(): void @ Show the cursor
+    ---@field public show        fun(): void @ Hide the cursor
+    ---@field public save        fun(): void @ Show the position of the cursor
+    ---@field public restore     fun(): void @ Restore the position of the cursor
+    ---@field public reset       fun(): void @ Reset the terminal (colors, cursor position)
+    ---@field public input       fun(): void @ Input iterator (coroutine-based) return a "next key" function that can be iteratively called to read a key (escape sequences returned by function keys are parsed)
+    ---@field public rawinput    fun(): void @ Same, but escape sequences are not parsed.
+    ---@field public getcurpos   fun(): number, number @ Return the current position of the cursor
+    ---@field public getscrlc    fun(): number, number @ Return the dimensions of the screen (number of lines and columns)
+    ---@field public keyname     fun(c: string): string @ Return a printable name for any key - key names in term.keys for function keys, - control characters are represented as "^A" - the character itself for other keys
+    ---@field public setrawmode  fun(): void @ tty mode management function: set the terminal in raw mode
+    ---@field public setsanemode fun(): void @ tty mode management function: set the terminal in a default "sane mode"
+    ---@field public savemode    fun(): void @ tty mode management function: get the current mode as a string
+
+
+    --- Terminal line
+    ---@alias TermLineNumber   number
+
+    --- Terminal column
+    ---@alias TermColumnNumber number
+
+
+    --- Foreground colors
+    ---@class ForegroundColor
+    ---@field public default ForegroundColorValue | '0'
+    ---@field public black   ForegroundColorValue | '30'
+    ---@field public red     ForegroundColorValue | '31'
+    ---@field public green   ForegroundColorValue | '32'
+    ---@field public yellow  ForegroundColorValue | '33'
+    ---@field public blue    ForegroundColorValue | '34'
+    ---@field public magenta ForegroundColorValue | '35'
+    ---@field public cyan    ForegroundColorValue | '36'
+    ---@field public white   ForegroundColorValue | '37'
+
+    --- Foreground color values
+    ---@alias ForegroundColorValue number
+
+
+    --- Background colors
+    ---@class BackgroundColor
+    ---@field public bgblack   BackgroundColorValue | '40'
+    ---@field public bgred     BackgroundColorValue | '41'
+    ---@field public bggreen   BackgroundColorValue | '42'
+    ---@field public bgyellow  BackgroundColorValue | '43'
+    ---@field public bgblue    BackgroundColorValue | '44'
+    ---@field public bgmagenta BackgroundColorValue | '45'
+    ---@field public bgcyan    BackgroundColorValue | '46'
+    ---@field public bgwhite   BackgroundColorValue | '47'
+
+    --- Background color values
+    ---@alias BackgroundColorValue number
+
+
+    --- ANSI escape attribute values
+    ---@alias TermModifierValue number
+
+    --- ANSI escape attributes
+    ---@class TermModifier
+    ---@field public reset   TermModifierValue | '0'
+    ---@field public normal  TermModifierValue | '0'
+    ---@field public bright  TermModifierValue | '1'
+    ---@field public bold    TermModifierValue | '1'
+    ---@field public reverse TermModifierValue | '7'
+
+
+    ---@alias KeyValue number
+
+    --- Keys
+    ---@class KeyEnum
+    ---@field public unknown  KeyValue | '0x10000'
+    ---@field public esc      KeyValue | '0x1b'
+    ---@field public del      KeyValue | '0x7f'
+    ---@field public kf1      KeyValue | '0xffff'
+    ---@field public kf2      KeyValue | '0xfffe'
+    ---@field public kf3      KeyValue | '0xfffd'
+    ---@field public kf4      KeyValue | '0xfffc'
+    ---@field public kf5      KeyValue | '0xfffb'
+    ---@field public kf6      KeyValue | '0xfffa'
+    ---@field public kf7      KeyValue | '0xfff9'
+    ---@field public kf8      KeyValue | '0xfff8'
+    ---@field public kf9      KeyValue | '0xfff7'
+    ---@field public kf10     KeyValue | '0xfff6'
+    ---@field public kf11     KeyValue | '0xfff5'
+    ---@field public kf12     KeyValue | '0xfff4'
+    ---@field public kins     KeyValue | '0xfff3'
+    ---@field public kdel     KeyValue | '0xfff2'
+    ---@field public khome    KeyValue | '0xfff1'
+    ---@field public kend     KeyValue | '0xfff0'
+    ---@field public kpgup    KeyValue | '0xffef'
+    ---@field public kpgdn    KeyValue | '0xffee'
+    ---@field public kup      KeyValue | '0xffed'
+    ---@field public kdown    KeyValue | '0xffec'
+    ---@field public kleft    KeyValue | '0xffeb'
+    ---@field public kright   KeyValue | '0xffea'
