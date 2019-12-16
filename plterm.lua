@@ -367,7 +367,6 @@ return term
 --[[                      EmmyLua Declarations                      ]]--
 
 --region plterm.emmylua
---region plterm.emmylua
 
     ---@class PureLuaTerm @ ANSI Terminal functions
     ---@field public clear       fun(): void @ Clear screen
